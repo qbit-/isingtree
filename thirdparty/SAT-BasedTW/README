@@ -1,0 +1,43 @@
+------------------------SAT-based approaches to treewidth computation----------------------
+
+This package includes:
+	1) A DGG to WCNF script that converts graph files in DGF format to MaxSAT instances (.wcnf files) for which 
+	   the optimal cost of the MaxSAT instance is equal to the treewidth of the graph. The script uses the encoding described in 
+	   [1]. 	  
+	2) A modified version of the minisat 2.2.0 SAT solver that reads the WCNF files corresponding to treewidth computation 
+	   and solves the instance using one of the three search strategies detailed in [1]		
+
+
+USAGE:
+	DGF2WCNF:
+		The script is written in Haskell and tested with ghc 7.6.3 under linux
+		package includes a precompiled binary linked both statically and dynamically. 
+		The script can be built by using the build script in the DGF2WCNF folder. 
+		
+		After building the binary expects one command line argument 
+		./DGF2WCNF_TW_linux FILE.dgf
+				
+		where FILE.dgg is the input graph. 
+		The script produces the file FILE.wcnf which contains a MaxSAT instance that has optimal cost equal to 
+		the treewidth of the input graph. The ".wcnf" file can be given to any MaxSAT solver, which results in the 
+		MaxSAT approachdescribed in {1]. Alternatively the ".wcnf" file can be input to the minisat-treewidth hack found in 
+		this package, which results in the approaches Iter-Lin-U, Iter-Lin-D or Iter-Bin of {1].    
+
+	minisat-treewidth: 
+		The binary accepts a ".wcnf" corresponding to the treewidht encoding as described in [1]. 
+		It also accepts the same flags as the regular minisat solver (invoke ./minisat-treewidth --help for more info) 
+		as well as the flag --search that controls the search strategy.
+		
+		Examples:
+			./minisat-treewidth --search=1 FILE.wcnf invokes the Iter-Bin search strategy (this is the default setting)
+			./minisat-treewidth --search=2 FILE.wcnf invokes the Iter-Lin-U search strategy  
+			./minisat-treewidth --search=3 FILE.wcnf invokes the Iter-Lin-D search strategy 
+
+DGF Files:
+	The package includes example dgf files. 
+
+
+
+REFERENCES:
+	[1] 	Berg, J. and Järvisalo, M., 2014, November. SAT-based approaches to treewidth computation: An evaluation. 
+		In Tools with Artificial Intelligence (ICTAI), 2014 IEEE 26th International Conference on (pp. 328-335). IEEE.
