@@ -1,3 +1,15 @@
 [submodule "thirdparty/open-wbo"]
 	path = thirdparty/open-wbo
 	url = https://github.com/sat-group/open-wbo.git
+[submodule "graph_model"]
+	path = graph_model
+	url = https://github.com/qbit-/graph_model.git
+[submodule "thirdparty/pace2017_solvers/tamaki_treewidth"]
+	path = thirdparty/pace2017_solvers/tamaki_treewidth
+	url = https://github.com/TCS-Meiji/PACE2017-TrackA.git
+[submodule "thirdparty/quickbb"]
+	path = thirdparty/quickbb
+	url = https://github.com/qbit-/quickbb.git
+[submodule "thirdparty/dgf2wcnf"]
+	path = thirdparty/dgf2wcnf
+	url = https://github.com/qbit-/dgf2wcnf.git
