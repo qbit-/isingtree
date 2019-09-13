@@ -113,13 +113,13 @@ def clauses_to_graph(clauses, read_as='sat_mis', formula_format='cnf',
     """
     allowed_read_as_values = {'sat_mis', 'sat_clique'}
     if read_as not in allowed_read_as_values:
-        raise ValueError('Unknown option read_as: {read_as}, '
-                         'allowed_values: {allowed_values}')
+        raise ValueError(f'Unknown option read_as: {read_as}, '
+                         f'allowed_values: {allowed_read_as_values}')
     allowed_format_values = {'cnf', 'wcnf'}
     if formula_format not in allowed_format_values:
         raise ValueError(
-            'Unknown option formula_format: {formula_format}, '
-            'allowed_values: {allowed_values}')
+            f'Unknown option formula_format: {formula_format}, '
+            f'allowed_values: {allowed_format_values}')
     CNF = 1
     WCNF = 2
 
@@ -179,24 +179,24 @@ def clauses_to_graph(clauses, read_as='sat_mis', formula_format='cnf',
             graph.add_nodes_from(new_nodes)
         graph.add_edges_from(it.combinations(new_nodes, 2),
                              weight=weight)
-        if n == 1:
+        if n == 0:
             # we are at the first clause. Save maximal weight
             maximal_weight = weight
-        elif n > n_hard-1:
+        elif n > n_hard - 1:
             soft_weight_sum += weight
 
     # Final check for content
     # Check weights correctness
     if soft_weight_sum > maximal_weight:
         raise ValueError(f'Sum of weights of soft clauses:'
-                         ' {soft_weight_sum} > '
-                         'maximal weight: {maximal_weight}')
+                         f' {soft_weight_sum} > '
+                         f'maximal weight: {maximal_weight}')
     # Check number of variables
     neg_vars = sorted(var for var in variables_nodes.keys() if var < 0)
     n_vars_read = len(set(map(abs, variables_nodes.keys())))
     if n_vars_read != n_vars:
-        raise ValueError('Number of variables read: {n_vars_read}'
-                         ' != number of variables in header: {n_vars}')
+        raise ValueError(f'Number of variables read: {n_vars_read}'
+                         f' != number of variables in header: {n_vars}')
 
     # Finalize the graph building. Add additional edges. We build graph
     # as MIS first
@@ -226,7 +226,8 @@ def clauses_to_graph(clauses, read_as='sat_mis', formula_format='cnf',
 
 
 def read_cnf_file(file_or_data,
-                  as_data=False, compressed=False):
+                  as_data=False, compressed=False,
+                  dgf2wcnf_faulty_sizes=False):
     """
     Reads clauses from a CNF or WCNF file.
 
@@ -237,8 +238,13 @@ def read_cnf_file(file_or_data,
     as_data: bool, default False
              If filedata should be interpreted as contents of the
              data file
-    compressed : bool
+    compressed : bool, default False
            if input file or data is compressed
+    dgf2wcnf_faulty_sizes: bool, default False
+           This option is for fixing a bug in the DGF2WCNF output
+           Basically, the number of hard clauses is 1 more than
+           is stated in the header, and the number of soft clauses
+           is 1 less.
     """
 
     if as_data is False:
@@ -258,7 +264,7 @@ def read_cnf_file(file_or_data,
     info = {}
     comment_patt = re.compile('^(\s*c\s+)(?P<comment>.*)')
     header_patt = re.compile(
-        '^(\s*p\s+)(?P<file_type>cnf|wcnf)\s+(?P<n_vars>\d+)\s+(?P<n_clauses>\d+)?(\s+(?P<n_hard>\d+))\s*$')
+        '^(\s*p\s+)(?P<file_type>cnf|wcnf)\s+(?P<n_vars>\d+)\s+(?P<n_clauses>\d+)?(\s+(?P<n_soft>\d+))\s*$')
 
     for n, line in enumerate(datafile):
         m = re.search(comment_patt, line)
@@ -270,13 +276,17 @@ def read_cnf_file(file_or_data,
             n_clauses = int(m.group('n_clauses'))
             file_type = CNF if m.group('file_type') == 'cnf' else WCNF
             info.update({'n_vars': n_vars, 'n_clauses': n_clauses,
-                         'formula_format': m.group('file_type'),
-                         'n_hard': m.group('n_hard')})
-            if m.group('n_hard') is None:
+                         'formula_format': m.group('file_type')})
+            if m.group('n_soft') is None:
                 n_hard = n_clauses
+                info['n_hard'] = None  # to comply with clauses_to_graph
             else:
-                n_hard = int(m.group('n_hard'))
-                if n_clauses - n_hard > 0:
+                n_soft = int(m.group('n_soft'))
+                if dgf2wcnf_faulty_sizes:
+                    n_soft = n_soft - 1  # to fix the bug in the sizes
+                n_hard = n_clauses - n_soft
+                info['n_hard'] = n_hard
+                if n_soft > 0:
                     info['is_maxsat'] = True
                 else:
                     info['is_maxsat'] = False
@@ -318,7 +328,8 @@ def read_cnf_file(file_or_data,
         # weight of the last hard clause
         maximal_weight = float(m.group('weight'))
 
-        for nnn, line in zip(range(nn, nn+n_clauses-n_hard), datafile):
+        for nnn, line in zip(range(
+                nn, nn+n_clauses-n_hard), datafile):
             m = re.search(clause_patt, line)
             if m is None:
                 raise ValueError(f'File format error at line {nnn}:\n'
@@ -330,16 +341,17 @@ def read_cnf_file(file_or_data,
             clauses.append(
                 (weight, clause_vars)
             )
+            soft_weight_sum += weight
 
         # Check weights correctness
         if soft_weight_sum > maximal_weight:
             raise ValueError(f'Sum of weights of soft clauses:'
-                             ' {soft_weight_sum} > '
-                             'maximal weight: {maximal_weight}')
+                             f' {soft_weight_sum} > '
+                             f'maximal weight: {maximal_weight}')
     # Final check for content
-    n_vars_read = len(set(map(abs(all_variables))))
+    n_vars_read = len(set(map(abs, all_variables)))
     if n_vars_read != n_vars:
-        raise ValueError('Number of variables read: {n_vars_read}'
-                         ' != number of variables in header: {n_vars}')
+        raise ValueError(f'Number of variables read: {n_vars_read}'
+                         f' != number of variables in header: {n_vars}')
 
     return clauses, info
