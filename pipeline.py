@@ -15,8 +15,11 @@ def get_dgf2wcnf_path():
     Set up DGF2WCNF path
     """
     import os
+    # _dgf2wcnf_path = os.path.join(
+    #     gm.system_defs.THIRDPARTY_PATH, 'dgf2wcnf', 'run_dgf2wcnf.sh')
     _dgf2wcnf_path = os.path.join(
-        gm.system_defs.THIRDPARTY_PATH, 'dgf2wcnf', 'run_dgf2wcnf.sh')
+        gm.system_defs.THIRDPARTY_PATH,
+        'SAT-BasedTW', 'builds', 'DGF2WCNF_TW_MacOS')
     if os.path.isfile(_dgf2wcnf_path):
         DGF2WCNF_COMMAND = _dgf2wcnf_path
     else:
@@ -59,10 +62,15 @@ def run_dgf2wcnf(
 
 if __name__ == '__main__':
     graph_initial = nx.grid_graph([4, 4])
-    peo1, tw1 = gm.get_upper_bound_peo(graph_initial, method='min_degree')
+    graph, inv_dict = gm.relabel_graph_nodes(
+        graph_initial, dict(zip(
+            graph_initial.nodes,
+            range(0, graph_initial.number_of_nodes()))))
+
+    peo1, tw1 = gm.get_upper_bound_peo(graph, method='min_degree')
     temp_filename_prefix = 'test1'
-    gm.exporters.generate_gr_file(
-        graph_initial, temp_filename_prefix+'.dgf')
+    gm.exporters.generate_dgf_file(
+        graph, temp_filename_prefix+'.dgf')
     run_dgf2wcnf(temp_filename_prefix+'.dgf')
     clauses, info = sat.read_cnf_file(
         temp_filename_prefix+'.wcnf', dgf2wcnf_faulty_sizes=True)
@@ -73,4 +81,3 @@ if __name__ == '__main__':
     peo2, tw2 = gm.get_upper_bound_peo(graph_sat_mis, method='min_degree')
     # gm.draw_graph(graph_sat_mis)
     # plt.show()
-
