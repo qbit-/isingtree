@@ -11,11 +11,11 @@ def get_dgf2wcnf_path():
     import os
     from .graph_model.system_defs import THIRDPARTY_PATH
 
-    # _dgf2wcnf_path = os.path.join(
-    #     gm.system_defs.THIRDPARTY_PATH, 'dgf2wcnf', 'run_dgf2wcnf.sh')
     _dgf2wcnf_path = os.path.join(
-        THIRDPARTY_PATH,
-        'SAT-BasedTW', 'builds', 'DGF2WCNF_TW_MacOS')
+        THIRDPARTY_PATH, 'dgf2wcnf', 'run_dgf2wcnf.sh')
+    # _dgf2wcnf_path = os.path.join(
+    #     THIRDPARTY_PATH,
+    #     'SAT-BasedTW', 'builds', 'DGF2WCNF_TW_MacOS')
     if os.path.isfile(_dgf2wcnf_path):
         DGF2WCNF_COMMAND = _dgf2wcnf_path
     else:
