@@ -12,7 +12,7 @@ def get_dgf2wcnf_path():
     from .graph_model.system_defs import THIRDPARTY_PATH
 
     _dgf2wcnf_path = os.path.join(
-        THIRDPARTY_PATH, 'dgf2wcnf', 'run_dgf2wcnf.sh')
+        THIRDPARTY_PATH, 'dgf2wcnf', 'DGF2WCNF_TW_linux')
     # _dgf2wcnf_path = os.path.join(
     #     THIRDPARTY_PATH,
     #     'SAT-BasedTW', 'builds', 'DGF2WCNF_TW_MacOS')
