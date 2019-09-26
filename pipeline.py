@@ -10,25 +10,6 @@ import sat
 import interfaces as api
 
 
-def run_openwbo():
-    """
-    Runs the OpenWBO MaxSAT solver and collects its output
-
-    Parameters
-    ----------
-    wcnf_filename : str
-         Path to the input WCNF file
-    command : str, optional
-         OpenWBO command name
-    cwd : str, default None
-         Current work directory
-
-    Returns
-    -------
-    None
-    """
-
-
 if __name__ == '__main__':
     graph_initial = nx.grid_graph([4, 4])
     graph, inv_dict = gm.relabel_graph_nodes(
