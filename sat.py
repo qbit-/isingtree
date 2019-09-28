@@ -110,6 +110,13 @@ def clauses_to_graph(clauses, read_as='sat_mis', formula_format='cnf',
               Format of the CNF formula. Can be either 'cnf' or 'wcnf'
     n_hard: int, default None
               Number of hard clauses if a MaxSAT problem is considered
+    Returns
+    -------
+    graph:  networkx.Graph
+           Encoding of the problem
+    nodes_to_clauses: dict
+           Dictionary with {node: (variable, clause)} pairs
+           for backwards encoding
     """
     allowed_read_as_values = {'sat_mis', 'sat_clique'}
     if read_as not in allowed_read_as_values:
@@ -145,13 +152,17 @@ def clauses_to_graph(clauses, read_as='sat_mis', formula_format='cnf',
     # arrays holding the nodes of the current variable
     variables_nodes = {}
 
+    # array holding the variable and the clause of the node
+    # for inverse mapping
+    nodes_to_clauses = {}
+
     # counter for the graph node number
     current_node = 0
     # sum of weights of soft clauses
     soft_weight_sum = 0
 
     # go over the clauses
-    for n, clause in enumerate(clauses):
+    for clause_idx, clause in enumerate(clauses):
         if data_type == WCNF:
             weight = clause[0]
             clause_vars = clause[1]
@@ -169,20 +180,19 @@ def clauses_to_graph(clauses, read_as='sat_mis', formula_format='cnf',
             except KeyError:
                 variables_nodes[var] = [node]
             graph.add_node(node, label=var)
+            nodes_to_clauses[node] = (var, clause_idx)
 
-        # We add a clique to each clause
-        # and store weight in the edges.
-        # Clique specific: we need weights to be stored in nodes
+        # We add a clique to each clause and store the weights
+        # on the nodes
         if read_as == 'sat_clique':
             graph.add_nodes_from(new_nodes, weight=weight)
         else:
             graph.add_nodes_from(new_nodes)
-        graph.add_edges_from(it.combinations(new_nodes, 2),
-                             weight=weight)
-        if n == 0:
+        graph.add_edges_from(it.combinations(new_nodes, 2))
+        if clause_idx == 0:
             # we are at the first clause. Save maximal weight
             maximal_weight = weight
-        elif n > n_hard - 1:
+        elif clause_idx > n_hard - 1:
             soft_weight_sum += weight
 
     # Final check for content
@@ -222,7 +232,56 @@ def clauses_to_graph(clauses, read_as='sat_mis', formula_format='cnf',
         graph = nx.complement(graph)
         nx.set_node_attributes(graph, attr)
 
-    return graph
+    return graph, nodes_to_clauses
+
+
+def check_mis_assignment(node_assignment, nodes_to_clauses):
+    """
+    Given a solution of the MIS SAT formulation, checks it for
+    consistensy and prints the result.
+
+    Parameters
+    ----------
+    node_assignment: dict
+              Dictionary of the {node: 0} or {node: 1} pairs
+    nodes_to_clauses: dict
+              Dictionary of {node: (var, clause)} pairs
+    """
+    var_values = {}
+    clauses = {}
+    for node, val in node_assignment.items():
+        var, clause = nodes_to_clauses[node]
+        if var < 0:  # negate the variable
+            var = -var
+            val = int(not val)
+        try:
+            var_values[var].append(val)
+        except KeyError:
+            var_values[var] = [val]
+        try:
+            clauses[clause].append(val)
+        except KeyError:
+            clauses[clause] = [val]
+
+    # Each variable has to have a single value on all of its nodes
+    multivalued_variables = []
+
+    for var, values in var_values.items():
+        if sum(values) != len(values) or sum(values) != 0:
+            multivalued_variables.append(var)
+
+    # count violated clauses
+    violated_clauses = []
+
+    for clause, values in clauses.items():
+        if sum(values) == 0:
+            violated_clauses.append(clause)
+
+    print('Multivariate variables. Those should not occur:')
+    print(f'{multivalued_variables}')
+
+    print('Violated clauses. Hard clauses should not be violated:')
+    print(f'{violated_clauses}')
 
 
 def read_cnf_file(file_or_data,
@@ -246,7 +305,6 @@ def read_cnf_file(file_or_data,
            is stated in the header, and the number of soft clauses
            is 1 less.
     """
-
     if as_data is False:
         if compressed:
             datafile = lzma.open(file_or_data, 'r')
